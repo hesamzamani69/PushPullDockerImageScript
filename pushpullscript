@@ -1,0 +1,34 @@
+#!/bin/bash
+set +x
+
+# Check if image.list file exists
+if [ ! -f "image.list" ]; then
+  echo "Error: File 'image.list' not found."
+  exit 1
+fi
+
+# Loop through each line in the file
+while IFS= read -r image_url; do
+  # Check if the line is empty or a comment (starting with #)
+  if [[ -z "$image_url" || "$image_url" =~ ^# ]]; then
+    continue
+  fi
+
+  # Pull the image using crictl (assuming RKE2 environment)
+  echo "Pulling image: $image_url"
+  docker pull "old.$image_url"
+
+  echo "Retag image: $image_url"
+  docker tag "old.$image_url" "$image_url"
+
+  echo "Pushing image: $image_url"
+  docker push "$image_url"
+
+  # Check the exit code of crictl pull
+  if [ $? -ne 0 ]; then
+    echo "Error: Failed to pull image '$image_url'."
+  fi
+done < "image.list"
+
+echo "Done pulling images."
+
